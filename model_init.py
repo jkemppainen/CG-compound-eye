@@ -288,18 +288,12 @@ def init_collections(collection_names=None, parent_collection=None):
         _collection_names = collection_names
 
     for name in _collection_names:
+        print("Clearing collection {}".format(name))
         collection = bpy.data.collections.get(name)
         
         if type(collection) != type(None):
-            # delete all objects in the collection
-            bpy.ops.object.select_all(action='DESELECT')
             for obj in collection.objects:
-                try:
-                    obj.select_set(True)
-                except:
-                    bpy.data.collections[0].objects.link(obj)
-                    obj.select_set(True)
-            bpy.ops.object.delete()
+                bpy.data.objects.remove(obj, do_unlink=True)
             
             # delete collection
             bpy.data.collections.remove(collection)
@@ -872,6 +866,7 @@ def main(only_ommatidium=False, pale_yellow=False, merge_lens_surfaces=False,
     rescale1(SCALE_FACTOR)
     
     init_collections()
+    bpy.ops.outliner.orphans_purge()
     
     if pale_yellow:
         ommatidia_types = ['pale', 'yellow']
