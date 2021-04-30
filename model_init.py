@@ -57,7 +57,10 @@ Parameters
             Number of corners for the rhabdomere cylinders. Higher values
             make rhabdomeres cross-section more circular.
                 Default : 16
-    
+        LOWLEVEL_OPS : bool
+            (experimental) If True, avoid bpy.ops and link as late as possible,
+            shortening the model init time from tens of minutes -> under a minute.
+            Animations do not work yet with this and rhabdomeres not properly rotated.
     
 
 TODO
@@ -96,7 +99,7 @@ LENS_DXDY = 0.3
 ONLY_RHABDOMERES = False        # If True, omit screening pigments and the lenses
 SCALE_FACTOR = 0.001            # Scaling factor from parameter micrometers to Blender's units
 RHABDOMERE_VERTICES = 16        # Amount of circularity in rhabdomere cylinders
-
+LOWLEVEL_OPS = True             # Avoid bpy.ops and link as late as possible
 
 # OTHER
 # --------
@@ -414,6 +417,8 @@ def create_rhabdomeres(individual_objs=False, mirrors=True, R78=False, ommatidia
                 bpy.ops.object.mode_set(mode='EDIT', toggle=False)
                 bpy.ops.transform.rotate(value=params.RHABDOMERE_ROTATION, orient_axis='Y')
                 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+                
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         
         create_rhabdomeres(mirror=False)
         if mirrors:
@@ -439,7 +444,7 @@ def create_rhabdomeres(individual_objs=False, mirrors=True, R78=False, ommatidia
             set_material(obj, "Dark")
         
         create_hexagon()
-    
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 
 
 
@@ -489,6 +494,7 @@ def create_lens(merge_surfaces=False, close_gap=False):
         # FIXME material setting like this doesnt't work when the close_gap is set
         set_material(obj, "Glass"+name)
         obj.select_set(True)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         
     if merge_surfaces and not close_gap:
         bpy.data.collections['primitives'].objects['lens_inner'].select_set(True)
@@ -522,6 +528,10 @@ def create_screening_pigments():
         COLLECTIONS['primitives'].objects.link(obj)
         
         cylinders.append(obj)
+        
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+    
+
     
     bool = cylinders[0].modifiers.new(name='bool', type='BOOLEAN')
     bool.object = cylinders[1]
@@ -592,12 +602,14 @@ def ommatidia(x,y,z, mirror=False, mirror_lr=False, add_to_collection='ommatidia
     if lowlevel:
         for objname in objnames:
             obj = bpy.data.collections['primitives'].objects[objname].copy()
-            obj.location = mathutils.Vector((x,y,z))
+            #mesh_offset = obj.location.copy()
+            obj.location += mathutils.Vector((x,y,z))
+
             objs.append(obj)
             # No linking, remember to do it outside this function if lowlevel
         
-        for obj in objs:
-            bpy.data.collections[add_to_collection].objects.link(obj)
+        #for obj in objs:
+        #    bpy.data.collections[add_to_collection].objects.link(obj)
     else:
         for objname in objnames:
             obj = bpy.data.collections['primitives'].objects[objname].copy()
@@ -611,29 +623,29 @@ def ommatidia(x,y,z, mirror=False, mirror_lr=False, add_to_collection='ommatidia
             objs.append(obj)
             
 
-    if rhabdomere_movements is not None:
-        # Animate rhabdomere object only
-        obj = objs[0]
-        obj.select_set(True)
-        baseloc = copy.deepcopy(obj.location)
+        if rhabdomere_movements is not None:
+            # Animate rhabdomere object only
+            obj = objs[0]
+            obj.select_set(True)
+            baseloc = copy.deepcopy(obj.location)
+            
+            for frame,a,b,c in rhabdomere_movements:
+                bpy.context.scene.frame_set(int(frame))
+                obj.location = copy.deepcopy(baseloc)
+                bpy.ops.transform.translate(value=[a,b,c], orient_type='LOCAL')
+                obj.keyframe_insert(data_path="location", index=-1)
         
-        for frame,a,b,c in rhabdomere_movements:
-            bpy.context.scene.frame_set(int(frame))
-            obj.location = copy.deepcopy(baseloc)
-            bpy.ops.transform.translate(value=[a,b,c], orient_type='LOCAL')
-            obj.keyframe_insert(data_path="location", index=-1)
-    
-    
-    for obj in objs:
-        obj.select_set(True)
-    
-    if lens_normal is not None:
-        a,b,c = lens_normal
-        xrot = -atan2(c,b)
-        bpy.ops.transform.rotate(value=xrot, orient_axis='X', orient_type='GLOBAL')
         
-        zrot = -atan2(-a,b)
-        bpy.ops.transform.rotate(value=zrot, orient_axis='Z', orient_type='GLOBAL')
+        for obj in objs:
+            obj.select_set(True)
+        
+        if lens_normal is not None:
+            a,b,c = lens_normal
+            xrot = -atan2(c,b)
+            bpy.ops.transform.rotate(value=xrot, orient_axis='X', orient_type='GLOBAL')
+            
+            zrot = -atan2(-a,b)
+            bpy.ops.transform.rotate(value=zrot, orient_axis='Z', orient_type='GLOBAL')
     
     
     return objs
@@ -701,7 +713,7 @@ def get_ommatidia_locations(side):
 
 
 def build_eye(side, locations, movement_data=None, move_along_x=True, scale_factor=None, ommatidia_types=[],
-        lowlevel=True):
+        lowlevel=False):
     '''
     Main eye building function.
     '''
@@ -716,6 +728,7 @@ def build_eye(side, locations, movement_data=None, move_along_x=True, scale_fact
     # Make sure all the objects are unselected at the start; Our function ommatidia()
     # requires this.
     bpy.ops.object.select_all(action='DESELECT')
+    
     
     for i_loc, location in enumerate(locations):
         print("{}, ommatidia {}/{}".format(name, i_loc+1, len(locations)))
@@ -736,7 +749,11 @@ def build_eye(side, locations, movement_data=None, move_along_x=True, scale_fact
         except:
             phi = pi/2
         
-        bpy.ops.transform.rotate(value=-phi, orient_axis='X', orient_type='LOCAL')
+        if lowlevel:
+            for obj in objs:
+                obj.rotation_euler[0] += phi
+        else:
+            bpy.ops.transform.rotate(value=-phi, orient_axis='X', orient_type='LOCAL')
         
         try:
             phi = atan(x/y)
@@ -744,29 +761,38 @@ def build_eye(side, locations, movement_data=None, move_along_x=True, scale_fact
             phi = pi/2
         if y < 0:
             phi = phi + pi
+        
+        if lowlevel:
+            for obj in objs:
+                obj.rotation_euler[2] += -phi
+                
+                if move_along_x:
+                    if side == 'right':
+                        obj.location[0] += params.EYE_HEAD_CP_DISTANCE
+                    else:
+                        obj.location[0] -= params.EYE_HEAD_CP_DISTANCE
             
-        bpy.ops.transform.rotate(value=phi, orient_axis='Z', orient_type='GLOBAL')
-        
-        
-
-        [obj.select_set(False) for obj in objs]
-        
-        objs[0].select_set(True)
-
-        bpy.context.view_layer.objects.active = objs[0]
-        bpy.ops.transform.rotate(value=pi/2-atan2(y,x), orient_axis='Z', orient_type='LOCAL')
-        bpy.context.view_layer.objects.active = None
-        objs[0].select_set(False)
-        
-        
-        if move_along_x:
-            # Finally, move the eye in the X-axis to the right distance from the head center point
-            [obj.select_set(True) for obj in objs]
-            if side == 'right':
-                bpy.ops.transform.translate(value=(params.EYE_HEAD_CP_DISTANCE, 0.0, 0.0))
-            else:
-                bpy.ops.transform.translate(value=(-params.EYE_HEAD_CP_DISTANCE, 0.0, 0.0))
+        else:
+            bpy.ops.transform.rotate(value=phi, orient_axis='Z', orient_type='GLOBAL')
+            
+            
+            # Rotation of the rhabdomeres across the eye
             [obj.select_set(False) for obj in objs]
+            objs[0].select_set(True)
+            bpy.context.view_layer.objects.active = objs[0]
+            bpy.ops.transform.rotate(value=pi/2-atan2(y,x), orient_axis='Z', orient_type='LOCAL')
+            bpy.context.view_layer.objects.active = None
+            objs[0].select_set(False)
+            
+        
+            if move_along_x:
+                # Finally, move the eye in the X-axis to the right distance from the head center point
+                [obj.select_set(True) for obj in objs]
+                if side == 'right':
+                    bpy.ops.transform.translate(value=(params.EYE_HEAD_CP_DISTANCE, 0.0, 0.0))
+                else:
+                    bpy.ops.transform.translate(value=(-params.EYE_HEAD_CP_DISTANCE, 0.0, 0.0))
+                [obj.select_set(False) for obj in objs]
 
 
         
@@ -789,7 +815,9 @@ def build_eye(side, locations, movement_data=None, move_along_x=True, scale_fact
         
         ommatidia_objs.append(objs)
         
-    return ommatidia_objs
+
+        
+    return name, ommatidia_objs
 
 
 
@@ -859,6 +887,7 @@ def main(only_ommatidium=False, pale_yellow=False, merge_lens_surfaces=False,
     if only_ommatidium:
         return None
     
+    all_ommatidia = {}
     for side in ['left', 'right']:
         locations = get_ommatidia_locations(side)
         
@@ -867,8 +896,20 @@ def main(only_ommatidium=False, pale_yellow=False, merge_lens_surfaces=False,
         else:
             movement_data = None
             
-        ommatidia = build_eye(side, locations, movement_data=movement_data,
-            move_along_x=True, scale_factor=SCALE_FACTOR, ommatidia_types=[''])
+        collection_name, ommatidia = build_eye(side, locations, movement_data=movement_data,
+            move_along_x=True, scale_factor=SCALE_FACTOR, ommatidia_types=[''],
+            lowlevel=LOWLEVEL_OPS)
+        
+        all_ommatidia[collection_name] = ommatidia
+
+
+    if LOWLEVEL_OPS:
+        # Lowlevel: Linking everything to the scene as late as possible
+        for side in all_ommatidia:
+            for objs in all_ommatidia[side]:
+                for obj in objs:
+                    bpy.data.collections[side].objects.link(obj)
+    
     
     hide_primitives()
     
