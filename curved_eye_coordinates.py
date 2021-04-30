@@ -164,7 +164,7 @@ def create_algo(R_eye, R_ommatidia):
         for ommatidium in go_through:
                         
             #if len(gone_through) > 0:
-            fixed_tree = KDTree(np.array([ommatidia[ind].cp for ind in i_fixed if ind!=ommatidium.i]), workers=-1)
+            fixed_tree = KDTree(np.array([ommatidia[ind].cp for ind in i_fixed if ind!=ommatidium.i]))
 
             for i_node in range(ommatidium.vertices):
                 
@@ -173,7 +173,7 @@ def create_algo(R_eye, R_ommatidia):
                     new_cp = ommatidium.get_potential_nodes()[i_node]
                     #new_cp = get_xyz(R_eye, *get_spherical(*new_cp)[1:])
                     
-                    distance_to_nearest = fixed_tree.query([new_cp])[0]
+                    distance_to_nearest = fixed_tree.query([new_cp], workers=-1)[0]
 
                     if distance_to_nearest < R_ommatidia:
                         break
@@ -194,8 +194,8 @@ def create_algo(R_eye, R_ommatidia):
     rot = math.radians(-30)
 
     # Workaround, remove duplicates
-    #fixed_tree = KDTree(np.array([ommatidia[ind].cp for ind in i_fixed if ind!=ommatidium.i]), workers=-1)
-    #ommatidia = [om for om in ommatidia if fixed_tree.query([om.cp])[0]<R_ommatidia]
+    #fixed_tree = KDTree(np.array([ommatidia[ind].cp for ind in i_fixed if ind!=ommatidium.i]))
+    #ommatidia = [om for om in ommatidia if fixed_tree.query([om.cp], workers=-1)[0]<R_ommatidia]
 
     return [(np.array([[cos(rot),0,sin(rot)],[0,1,0],[-sin(rot),0,cos(rot)]]) @ om.cp).flatten() for om in ommatidia]
 
