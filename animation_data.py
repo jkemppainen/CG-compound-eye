@@ -48,7 +48,7 @@ def main():
     locations = np.load(locations_savefn)
     
     # GET MOVEMENT DATA FROM PUPIL ANALYSER EXPORT FILE
-    fn = "3d_vectors_averaged_wtb_01_fullscan_wtb_02_fullscan_wtb_03_fullscan_wtb_04_fullscan_wtb_05_fullscan_2020-04-02 10:57:26.928333.json"
+    fn = "data/3d_vectors_averaged_wtb_01_fullscan_wtb_02_fullscan_wtb_03_fullscan_wtb_04_fullscan_wtb_05_fullscan_2020-04-02 10:57:26.928333.json"
     with open(fn, 'r') as fp:
         data = json.load(fp)
     
