@@ -30,15 +30,6 @@ To render DPP images
 
 ## Modification
 
-Distributed as a script, the CG-eye is easily modified.
+Distributed as a script, the CG-eye can be easily modified.
 For details, see the documentation in *model_init.py*.
 
-## Troubeshooting
-
-Make sure that
-
-* `3D cursor` is at the world origin
-* Blender is in the `Object Mode`
-* `EXTERNAL_PYTHON`'s value, when typed on a shell (default *python*), opens a Python interpreter where `import scipy` works
-
-Try also with a new blend file in case of problems.
