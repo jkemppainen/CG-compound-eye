@@ -135,6 +135,8 @@ def main():
         savedir = ''
         close=True
     
+    os.makedirs(savedir, exist_ok=True)
+    
     vertices, faces = create_lens(r, t, d, dxdy, close=close)
     np.save(os.path.join(savedir, 'lens_vertices.npy'), vertices, allow_pickle=False)
     np.save(os.path.join(savedir, 'lens_faces.npy'), faces, allow_pickle=False)

@@ -456,13 +456,27 @@ def create_lens(merge_surfaces=False, close_gap=False):
     close_gap       (experimental) If true, close the cap between the surfaces. Does not work with materials atm.
     '''
     # Call system python to run our lens making script (outside the bundled Blender Python)
-    subpr = subprocess.run([EXTERNAL_PYTHON, os.path.join(MODELPATH, 'create_lens.py'),
-        str(params.LENS_R), str(params.LENS_T), str(params.LENS_D), str(LENS_DXDY), str(close_gap), MODELPATH])
+    args = [EXTERNAL_PYTHON, os.path.join(MODELPATH, 'create_lens.py'),
+        str(params.LENS_R), str(params.LENS_T), str(params.LENS_D), str(LENS_DXDY),
+        str(close_gap), os.path.join(MODELPATH, 'tmp')]
+    
+    # Use previous lens data if parameters not changed
+    args_cache = os.path.join(MODELPATH, 'tmp', 'lens_args.npy')
+    try:
+        with open(args_cache, 'r') as fp: past_args = fp.read()
+    except:
+        past_args = None
+    
+    if str(args) == past_args:
+        print('Using lens mesh from past run (not changed)')
+    else:
+        subpr = subprocess.run(args)
+        with open(args_cache, 'w') as fp: fp.write(str(args))
     
     # Load the npy file created by create_lens.py (to be run with Python external to
     # Blender; by default, Blender Python has no scipy package)
-    vertices = np.load(os.path.join(bpy.path.abspath("//"), 'lens_vertices.npy'))
-    faces = np.load(os.path.join(bpy.path.abspath("//"), 'lens_faces.npy'))
+    vertices = np.load(os.path.join(MODELPATH, 'tmp', 'lens_vertices.npy'))
+    faces = np.load(os.path.join(MODELPATH, 'tmp', 'lens_faces.npy'))
     
     if close_gap:
         iterover = zip([''], [90])
@@ -495,6 +509,7 @@ def create_lens(merge_surfaces=False, close_gap=False):
         bpy.data.collections['primitives'].objects['lens_outer'].select_set(True)
         bpy.ops.object.join()
         bpy.context.view_layer.objects.active.name = "lens"
+    
     
     bpy.ops.object.select_all(action='DESELECT')
     
@@ -542,7 +557,6 @@ def create_screening_pigments():
     
     set_material(cylinders[0], "Dark")
     
-
 
 def ommatidia(x,y,z, mirror=False, mirror_lr=False, add_to_collection='ommatidia',
         lens_normal=None, rhabdomere_movements=None, merge_stationary=False,
@@ -673,11 +687,27 @@ def get_ommatidia_locations(side):
     if params.CURVED_EYE_METHOD == 'icosphere':
         locations = curved_eye_coordinates()
     elif params.CURVED_EYE_METHOD == 'external':
-        # Call system python to run again since scipy needed
-        subpr = subprocess.run([EXTERNAL_PYTHON, os.path.join(MODELPATH, 'curved_eye_coordinates.py'),
-            str(params.EYE_RADIUS), str(params.EYE_HORIZONTAL_R), str(params.LENS_D/2), MODELPATH])
         
-        locations = np.load(os.path.join(bpy.path.abspath("//"), 'curved_eye_coordinates.npy'))
+        
+        # Call system python to run our lens making script (outside the bundled Blender Python)
+        args = [EXTERNAL_PYTHON, os.path.join(MODELPATH, 'curved_eye_coordinates.py'),
+            str(params.EYE_RADIUS), str(params.EYE_HORIZONTAL_R), str(params.LENS_D/2),
+            os.path.join(MODELPATH, 'tmp')]
+        
+        # Use previous lens data if parameters not changed
+        args_cache = os.path.join(MODELPATH, 'tmp', 'eye_coordinates_args.txt')
+        try:
+            with open(args_cache, 'r') as fp: past_args = fp.read()
+        except:
+            past_args = None
+        
+        if str(args) == past_args:
+            print('Using ommatidia locations from a past run (not changed)')
+        else:
+            subpr = subprocess.run(args)
+            with open(args_cache, 'w') as fp: fp.write(str(args))
+        
+        locations = np.load(os.path.join(MODELPATH, 'tmp', 'curved_eye_coordinates.npy'))
     
     
     # No  and allow only X>0
