@@ -1,8 +1,7 @@
 # CG compound eye
 
 *GG-compound-eye* is a parametric computer graphics (CG) model of
-the *Drosophila* compound eyes, capable of producing the deep pseudopupil (DPP)
-spectacle.
+the *Drosophila* compound eyes, capable of producing the deep pseudopupil (DPP).
 
 It uses in-Blender-scripting to initialize the 3D model
 and LuxCoreRender to simulate/render.
@@ -31,5 +30,15 @@ To render DPP images
 
 ## Modification
 
-Distributing the CG-eye as a script allows easy and powerful
-modifications. For details, see the documentation in *model_init.py*.
+Distributed as a script, the CG-eye is easily modified.
+For details, see the documentation in *model_init.py*.
+
+## Troubeshooting
+
+Make sure that
+
+* `3D cursor` is at the world origin
+* Blender is in the `Object Mode`
+* `EXTERNAL_PYTHON`'s value, when typed on a shell (default *python*), opens a Python interpreter where `import scipy` works
+
+Try also with a new blend file in case of problems.
