@@ -77,7 +77,7 @@ class Ommatidium:
             self.R_eye = R_eye
         
         self.R_ommatidia = R_ommatidia
-        self.F = np.zeros(3, dtype=np.float)
+        self.F = np.zeros(3, dtype=np.float64)
         self.v = 0
         self.i = index
         #self.node_index
