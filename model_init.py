@@ -541,14 +541,22 @@ def create_screening_pigments():
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     
 
-    
+    # Boolean difference modifier
     bool = cylinders[0].modifiers.new(name='bool', type='BOOLEAN')
     bool.object = cylinders[1]
     bool.operation = 'DIFFERENCE'
-    bpy.ops.object.modifier_apply(
-            {"object": cylinders[0]},
-            apply_as='DATA',
-            modifier=bool.name)
+    
+    if bpy.app.version >= (2, 90, 0):
+        # API change from 2.90 onwards
+        bpy.ops.object.modifier_apply(
+                {"object": cylinders[0]},
+                modifier=bool.name)
+    else:
+        # Older API 2.83 and older
+        bpy.ops.object.modifier_apply(
+                {"object": cylinders[0]},
+                apply_as='DATA',
+                modifier=bool.name)
     
     # Remove inner piece
     bpy.ops.object.select_all(action='DESELECT')
