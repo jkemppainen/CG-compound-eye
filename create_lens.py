@@ -17,8 +17,6 @@ import os
 import numpy as np
 import scipy.spatial
 
-import matplotlib.pyplot as plt
-
 
 def create_lens(r, t, d, dxdy, close=False):
     '''
